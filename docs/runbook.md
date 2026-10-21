@@ -30,6 +30,15 @@ curl "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
 
 `last_error_message` in that output is the first place to look when the bot is silent.
 
+## Production
+
+| Item | Value |
+|---|---|
+| Worker URL | https://image-to-excel-bot.image-to-excel-bot.workers.dev |
+| Webhook path | `/webhook` |
+| D1 database | `image-to-excel` |
+| Webhook secret | Worker secret; local copy in `.dev.vars` (never commit) |
+
 ## Everyday
 
 | Task | Command |

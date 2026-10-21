@@ -14,10 +14,11 @@ Status key: ✅ done · 🔄 in progress · ⏳ next · 💤 later
 - ✅ Agent guide, rules, context, architecture, decisions, runbook, testing docs
 - ✅ Public GitHub repo, CI for typecheck and tests
 
-## Phase 2 – Deploy ⏳
+## Phase 2 – Deploy 🔄
 
-- ⏳ Create D1 database and apply schema
-- ⏳ Generate webhook secret, deploy Worker
+- ✅ Create D1 database `image-to-excel` (WEUR) and apply schema
+- ✅ Deploy Worker to `https://image-to-excel-bot.image-to-excel-bot.workers.dev`
+- ✅ Generate `TELEGRAM_WEBHOOK_SECRET` and store it as a Worker secret (local copy in git-ignored `.dev.vars`)
 - ⏳ Add `TELEGRAM_BOT_TOKEN` secret (needs the token from @BotFather)
 - ⏳ Register webhook, smoke test `/start`
 - ⏳ Set `ALLOWED_CHAT_IDS` to the owner's chat id

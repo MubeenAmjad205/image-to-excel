@@ -9,8 +9,7 @@
     {
       "binding": "DB",
       "database_name": "image-to-excel",
-      // Replace with the id printed by: npx wrangler d1 create image-to-excel
-      "database_id": "REPLACE_WITH_YOUR_D1_ID"
+      "database_id": "73737bc1-d5d8-4cf9-a768-6a0dfd2d4deb"
     }
   ],
   "vars": {
