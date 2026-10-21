@@ -22,7 +22,7 @@ Status key: ✅ done · 🔄 in progress · ⏳ next · 💤 later
 - ✅ Add `TELEGRAM_BOT_TOKEN` secret
 - ✅ Register webhook and command menu via the setup GitHub Action (Telegram is blocked from the owner's network and from Cloudflare's Lahore colo)
 - ✅ Smoke test: `/start` and the site-tracker sample worked end to end (2026-10-21)
-- ⏳ Set `ALLOWED_CHAT_IDS` to the owner's chat id
+- ✅ Set `ALLOWED_CHAT_IDS` to the owner's chat id
 
 ## Phase 2b – Output format ✅
 

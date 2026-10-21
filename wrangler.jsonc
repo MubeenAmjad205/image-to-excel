@@ -21,7 +21,7 @@
     "PUBLIC_URL": "https://image-to-excel-bot.image-to-excel-bot.workers.dev",
     "VISION_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
     // Comma-separated Telegram chat ids allowed to use the bot. Empty = anyone.
-    "ALLOWED_CHAT_IDS": ""
+    "ALLOWED_CHAT_IDS": "OWNER_CHAT_ID"
   }
   // Secrets (set with `npx wrangler secret put NAME`):
   //   TELEGRAM_BOT_TOKEN       required
