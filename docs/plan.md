@@ -19,8 +19,9 @@ Status key: ✅ done · 🔄 in progress · ⏳ next · 💤 later
 - ✅ Create D1 database `image-to-excel` (WEUR) and apply schema
 - ✅ Deploy Worker to `https://image-to-excel-bot.image-to-excel-bot.workers.dev`
 - ✅ Generate `TELEGRAM_WEBHOOK_SECRET` and store it as a Worker secret (local copy in git-ignored `.dev.vars`)
-- ⏳ Add `TELEGRAM_BOT_TOKEN` secret (needs the token from @BotFather)
-- ⏳ Register webhook, smoke test `/start`
+- ✅ Add `TELEGRAM_BOT_TOKEN` secret
+- ✅ Register webhook and command menu via the setup GitHub Action (Telegram is blocked from the owner's network and from Cloudflare's Lahore colo)
+- ⏳ Smoke test: `/start`, then one sample image
 - ⏳ Set `ALLOWED_CHAT_IDS` to the owner's chat id
 
 ## Phase 3 – Accuracy check ⏳
@@ -37,6 +38,7 @@ Status key: ✅ done · 🔄 in progress · ⏳ next · 💤 later
 - Caption shortcuts: `split <column> by <sep>`, `keep rows where ...`.
 - Optional status column from row colour.
 - Prune `updates` rows older than 7 days on a cron trigger.
+- Verify targeted placement (`placement.hostname = api.telegram.org`) takes effect; drop it if it never does.
 - `/model` command to show the active engine and model.
 
 ## Phase 5 – Maybe 💤

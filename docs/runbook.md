@@ -13,7 +13,18 @@ npx wrangler secret put ANTHROPIC_API_KEY      # optional
 npm run deploy
 ```
 
-Register the webhook (replace placeholders):
+Register the webhook. Easiest: run the **Setup Telegram webhook** GitHub Action
+(Actions tab, or `gh workflow run setup-webhook.yml`). It calls the Worker's `/setup` route from
+GitHub's servers, which registers `/webhook` and the command menu. It needs the repo secret
+`TELEGRAM_WEBHOOK_SECRET` (same value as the Worker secret).
+
+From a network that can reach Telegram you can also call it directly:
+
+```sh
+curl -X POST -H "x-setup-key: $WEBHOOK_SECRET" https://image-to-excel-bot.image-to-excel-bot.workers.dev/setup
+```
+
+Or call Telegram by hand (replace placeholders):
 
 ```sh
 curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
@@ -37,7 +48,8 @@ curl "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
 | Worker URL | https://image-to-excel-bot.image-to-excel-bot.workers.dev |
 | Webhook path | `/webhook` |
 | D1 database | `image-to-excel` |
-| Webhook secret | Worker secret; local copy in `.dev.vars` (never commit) |
+| Bot | @telco_conveter_bot |
+| Webhook secret | Worker secret + GitHub repo secret; local copy in `.dev.vars` (never commit) |
 
 ## Everyday
 
@@ -47,13 +59,14 @@ curl "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
 | Live logs | `npx wrangler tail` |
 | Change model | edit `VISION_MODEL` in `wrangler.jsonc`, deploy |
 | Lock to chat ids | edit `ALLOWED_CHAT_IDS`, deploy |
-| Rotate webhook secret | `wrangler secret put TELEGRAM_WEBHOOK_SECRET`, then re-run `setWebhook` with the new value |
+| Rotate webhook secret | update `.dev.vars`, `wrangler secret put TELEGRAM_WEBHOOK_SECRET`, `gh secret set TELEGRAM_WEBHOOK_SECRET`, then run the setup Action |
 | Query D1 | `npx wrangler d1 execute image-to-excel --remote --command "SELECT count(*) FROM tables"` |
 
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
+| Calls to Telegram hang from Pakistan | `api.telegram.org` is blocked there, including from Cloudflare's Lahore data center (`cf-placement: local-LHE`). Webhook traffic comes from Telegram's servers and runs elsewhere, so the bot works. For admin calls use the GitHub Action, not a local curl. Do not route the bot through a third-party proxy: it would see the bot token |
 | Bot silent, `getWebhookInfo` shows 403 | Webhook secret mismatch. Re-run `setWebhook` with the current secret |
 | Bot silent, 500 errors | Missing secret or D1 schema not applied. Check `wrangler tail` |
 | "This bot is private" | Your chat id is not in `ALLOWED_CHAT_IDS` |

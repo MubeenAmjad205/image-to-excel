@@ -8,6 +8,7 @@
 | Cloudflare Worker (`src/index.ts`) | Single HTTP endpoint `POST /webhook` |
 | Workers AI, `VISION_MODEL` | Default engine: image to JSON table, and chat answers |
 | Claude API (optional) | Second engine for `/hq` re-reads. Off unless `ANTHROPIC_API_KEY` is set |
+| `POST /setup` | Admin route, header `x-setup-key`. Registers the webhook and command menu |
 | D1 (SQLite) | Processed update ids, extracted tables, chat history |
 
 ## Request flow
