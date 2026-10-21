@@ -45,3 +45,4 @@ These are hard rules for anyone, human or agent, changing this repo.
 15. D1 schema changes are additive (`CREATE ... IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN`) and
     go in `schema.sql` plus a note in the runbook.
 16. Small focused commits with imperative messages ("Add /hq button", not "updates").
+17. No `Co-Authored-By:` trailers or AI attribution in commit messages or PR descriptions.
