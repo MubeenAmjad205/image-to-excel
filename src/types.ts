@@ -4,7 +4,8 @@ export interface Env {
   VISION_MODEL: string;
   /** Public base URL of this Worker, used for table viewer links. */
   PUBLIC_URL: string;
-  ALLOWED_CHAT_IDS: string;
+  /** Secret: comma-separated chat ids allowed to use the bot. Unset = anyone. */
+  ALLOWED_CHAT_IDS?: string;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_WEBHOOK_SECRET: string;
   ANTHROPIC_API_KEY?: string;

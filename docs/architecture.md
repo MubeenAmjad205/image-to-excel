@@ -61,7 +61,7 @@ Images are never stored. Telegram keeps them and `file_id` fetches them again.
 |---|---|---|
 | `PUBLIC_URL` | var | Worker base URL used in viewer links |
 | `VISION_MODEL` | var | Workers AI model id with vision input |
-| `ALLOWED_CHAT_IDS` | var | Comma-separated chat ids. Empty means anyone |
+| `ALLOWED_CHAT_IDS` | secret, optional | Comma-separated chat ids. Empty means anyone |
 | `TELEGRAM_BOT_TOKEN` | secret | From @BotFather |
 | `TELEGRAM_WEBHOOK_SECRET` | secret | Shared secret checked on every webhook call |
 | `ANTHROPIC_API_KEY` | secret, optional | Enables `/hq` |

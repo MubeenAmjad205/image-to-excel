@@ -49,7 +49,7 @@ To paste: tap the grey block to copy it, click cell A1 in Excel, paste.
      -d 'allowed_updates=["message","callback_query"]'
    ```
 6. Send `/start` to the bot. To lock it to yourself, put your chat id
-   (the bot shows it to strangers) in `ALLOWED_CHAT_IDS` and redeploy.
+   (the bot shows it to strangers) in the `ALLOWED_CHAT_IDS` secret: `npx wrangler secret put ALLOWED_CHAT_IDS`.
 
 ## Changing the vision model
 

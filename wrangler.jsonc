@@ -19,12 +19,11 @@
     // Free Workers AI vision model. Swap for any other vision model in the catalog.
     // Public URL of this Worker, used for "Open & copy" table links.
     "PUBLIC_URL": "https://image-to-excel-bot.image-to-excel-bot.workers.dev",
-    "VISION_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
-    // Comma-separated Telegram chat ids allowed to use the bot. Empty = anyone.
-    "ALLOWED_CHAT_IDS": "OWNER_CHAT_ID"
+    "VISION_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct"
   }
   // Secrets (set with `npx wrangler secret put NAME`):
   //   TELEGRAM_BOT_TOKEN       required
   //   TELEGRAM_WEBHOOK_SECRET  required, any random string
   //   ANTHROPIC_API_KEY        optional, enables the /hq second door
+  //   ALLOWED_CHAT_IDS         optional, comma-separated chat ids allowed to use the bot (empty = anyone)
 }

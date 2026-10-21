@@ -58,7 +58,7 @@ curl "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
 | Deploy | `npm run deploy` |
 | Live logs | `npx wrangler tail` |
 | Change model | edit `VISION_MODEL` in `wrangler.jsonc`, deploy |
-| Lock to chat ids | edit `ALLOWED_CHAT_IDS`, deploy |
+| Lock to chat ids | `npx wrangler secret put ALLOWED_CHAT_IDS` (comma-separated). Kept out of the repo |
 | Rotate webhook secret | update `.dev.vars`, `wrangler secret put TELEGRAM_WEBHOOK_SECRET`, `gh secret set TELEGRAM_WEBHOOK_SECRET`, then run the setup Action |
 | Query D1 | `npx wrangler d1 execute image-to-excel --remote --command "SELECT count(*) FROM tables"` |
 
