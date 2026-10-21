@@ -17,6 +17,8 @@
   ],
   "vars": {
     // Free Workers AI vision model. Swap for any other vision model in the catalog.
+    // Public URL of this Worker, used for "Open & copy" table links.
+    "PUBLIC_URL": "https://image-to-excel-bot.image-to-excel-bot.workers.dev",
     "VISION_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
     // Comma-separated Telegram chat ids allowed to use the bot. Empty = anyone.
     "ALLOWED_CHAT_IDS": ""

@@ -2,10 +2,9 @@ import type { Env } from "./types.ts";
 
 export type InlineButton =
   | { text: string; callback_data: string }
-  | { text: string; copy_text: { text: string } };
-
-/** Telegram limits copy_text buttons to 256 characters. */
-export const COPY_BUTTON_LIMIT = 256;
+  | { text: string; copy_text: { text: string } }
+  | { text: string; web_app: { url: string } }
+  | { text: string; url: string };
 
 export class Telegram {
   constructor(private env: Env) {}

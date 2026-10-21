@@ -25,3 +25,11 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS messages_chat ON messages (chat_id, id);
+
+-- Unguessable links to the table viewer page (/t/<token>). One row per extraction.
+CREATE TABLE IF NOT EXISTS shares (
+  token TEXT PRIMARY KEY,
+  table_id INTEGER NOT NULL,
+  chat_id INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);

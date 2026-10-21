@@ -14,10 +14,14 @@ These are hard rules for anyone, human or agent, changing this repo.
 
 ## Output
 
-4. The default reply is TSV in a `<pre>` block. Do not make files unless the user asks
+4. The default reply is a summary plus the **Open & copy** viewer button. Do not send TSV in `<pre>`
+   blocks as the main output: Telegram shows tabs as spaces. Do not make files unless the user asks
    (`/csv`, `/tsv` or a button).
+4a. Every string rendered into the viewer page passes through `escapeHtml`, and data embedded in
+   `<script>` has `<` escaped. `test/page.test.ts` covers this; keep it passing.
 5. Every string that goes into a Telegram HTML message passes through `escapeHtml`.
 6. Respect Telegram limits: 4096 characters per message, 256 for `copy_text`, 64 bytes for `callback_data`.
+6a. Viewer links are bearer links. Tokens come from `crypto.getRandomValues` (at least 128 bits). Never use table ids in URLs.
 
 ## Platform
 

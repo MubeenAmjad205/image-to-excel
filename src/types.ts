@@ -2,6 +2,8 @@ export interface Env {
   AI: Ai;
   DB: D1Database;
   VISION_MODEL: string;
+  /** Public base URL of this Worker, used for table viewer links. */
+  PUBLIC_URL: string;
   ALLOWED_CHAT_IDS: string;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_WEBHOOK_SECRET: string;

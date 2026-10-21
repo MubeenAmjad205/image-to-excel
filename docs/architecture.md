@@ -8,6 +8,7 @@
 | Cloudflare Worker (`src/index.ts`) | Single HTTP endpoint `POST /webhook` |
 | Workers AI, `VISION_MODEL` | Default engine: image to JSON table, and chat answers |
 | Claude API (optional) | Second engine for `/hq` re-reads. Off unless `ANTHROPIC_API_KEY` is set |
+| `GET /t/<token>` | Table viewer page (Mini App). Grid + Copy table + CSV. Token is 144-bit random, stored in `shares` |
 | `POST /setup` | Admin route, header `x-setup-key`. Registers the webhook and command menu |
 | D1 (SQLite) | Processed update ids, extracted tables, chat history |
 
@@ -30,11 +31,18 @@
 
 ## Reply format
 
-Each table is sent as an HTML message with a `<pre>` block of TSV. Telegram clients show a copy
-control on `<pre>` blocks. Tables of 256 characters or fewer also get a `copy_text` button, which
-is Telegram's limit for that button. Long tables are split on row boundaries into messages under
-4096 characters. The header row appears in the first part only, so pasting the parts in order
-rebuilds the table.
+See [decision 0005](decisions/0005-table-viewer-page.md). The chat reply is a short summary
+(name, rows × cols, column names, notes) with buttons:
+
+- **📊 Open & copy** opens `/t/<token>`: a Telegram Mini App in private chats, a normal link in groups.
+  The page shows the grid. **Copy table** writes both `text/html` and `text/plain` (TSV) to the
+  clipboard, so Excel, Sheets and Numbers paste real cells. The HTML marks cells as text
+  (`mso-number-format:'\@'`) so Excel keeps values like `51.1.1` as typed.
+- **CSV file** sends a `.csv` document.
+- **🔁 Re-read HQ** when `ANTHROPIC_API_KEY` is set.
+
+Chat answers that contain a TSV code block are parsed (`parseTSV`), stored as a table with
+engine `chat` and an empty `file_id`, and get the same buttons.
 
 ## Data model (D1)
 
@@ -42,6 +50,7 @@ rebuilds the table.
 |---|---|---|
 | `updates` | `update_id`, `created_at` | Dedup. Grows forever; prune later (see plan) |
 | `tables` | `id`, `chat_id`, `file_id`, `mime`, `data` (JSON `Extraction`), `engine`, `created_at` | `file_id` lets `/hq` re-download the image without storing it |
+| `shares` | `token`, `table_id`, `chat_id`, `created_at` | Viewer links. Anyone with the link can view that table |
 | `messages` | `id`, `chat_id`, `role`, `content`, `created_at` | Chat history |
 
 Images are never stored. Telegram keeps them and `file_id` fetches them again.
@@ -50,6 +59,7 @@ Images are never stored. Telegram keeps them and `file_id` fetches them again.
 
 | Name | Kind | Purpose |
 |---|---|---|
+| `PUBLIC_URL` | var | Worker base URL used in viewer links |
 | `VISION_MODEL` | var | Workers AI model id with vision input |
 | `ALLOWED_CHAT_IDS` | var | Comma-separated chat ids. Empty means anyone |
 | `TELEGRAM_BOT_TOKEN` | secret | From @BotFather |

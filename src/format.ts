@@ -76,3 +76,21 @@ export function base64(buf: ArrayBuffer): string {
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(bin);
 }
+
+/**
+ * Parse a tab-separated block (e.g. a table the chat model wrote in a code block).
+ * Returns null unless it has a header plus at least one row and 2+ columns.
+ */
+export function parseTSV(block: string): Table | null {
+  const lines = block.replace(/\r/g, "").split("\n").filter((l) => l.trim() !== "");
+  if (lines.length < 2 || !lines[0].includes("\t")) return null;
+  const [headers, ...rows] = lines.map((l) => l.split("\t"));
+  if (headers.length < 2) return null;
+  return normalizeTable({ title: "", headers, rows });
+}
+
+/** One-line description of a table for the chat summary. */
+export function summarize(t: Table, maxChars = 300): string {
+  const cols = t.headers.join(" · ");
+  return cols.length > maxChars ? cols.slice(0, maxChars - 1) + "…" : cols;
+}

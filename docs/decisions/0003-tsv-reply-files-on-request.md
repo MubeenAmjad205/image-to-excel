@@ -1,6 +1,6 @@
 # 0003 – Reply with TSV in a copy block; files only on request
 
-Status: accepted
+Status: superseded by [0005](0005-table-viewer-page.md). The files-on-request part still holds.
 
 ## Context
 The user wants to copy and paste into Excel, and does not want a file every time.

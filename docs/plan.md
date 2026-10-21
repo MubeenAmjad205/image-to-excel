@@ -21,10 +21,20 @@ Status key: ✅ done · 🔄 in progress · ⏳ next · 💤 later
 - ✅ Generate `TELEGRAM_WEBHOOK_SECRET` and store it as a Worker secret (local copy in git-ignored `.dev.vars`)
 - ✅ Add `TELEGRAM_BOT_TOKEN` secret
 - ✅ Register webhook and command menu via the setup GitHub Action (Telegram is blocked from the owner's network and from Cloudflare's Lahore colo)
-- ⏳ Smoke test: `/start`, then one sample image
+- ✅ Smoke test: `/start` and the site-tracker sample worked end to end (2026-10-21)
 - ⏳ Set `ALLOWED_CHAT_IDS` to the owner's chat id
 
+## Phase 2b – Output format ✅
+
+- ✅ Replace TSV-in-chat with summary + **Open & copy** viewer page ([0005](decisions/0005-table-viewer-page.md))
+- ✅ Chat answers with TSV blocks become tables with the same buttons
+- ⏳ Owner to confirm paste into Excel from Telegram Desktop and phone
+
 ## Phase 3 – Accuracy check ⏳
+
+First result, Llama 4 Scout on the site-tracker sample sent as a compressed Photo: 9 columns and 11 rows
+correct, 2 cells missing (Team for SITE133 "Team Amber" and SITE166 "Team Lime" came back empty).
+
 
 - Run the two sample screenshots and 5 to 10 more real ones through the bot.
 - Record per image: cells wrong, empty-cell shifts, rows missed (template in [testing.md](testing.md)).
@@ -38,6 +48,7 @@ Status key: ✅ done · 🔄 in progress · ⏳ next · 💤 later
 - Caption shortcuts: `split <column> by <sep>`, `keep rows where ...`.
 - Optional status column from row colour.
 - Prune `updates` rows older than 7 days on a cron trigger.
+- Expire viewer links (`shares`) after N days.
 - Verify targeted placement (`placement.hostname = api.telegram.org`) takes effect; drop it if it never does.
 - `/model` command to show the active engine and model.
 

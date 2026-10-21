@@ -1,14 +1,15 @@
 import { chat, extractWithClaude, extractWithWorkersAI, type Engine } from "./extract.ts";
-import { chunkLines, escapeHtml, toCSV, toTSV } from "./format.ts";
+import { chunkLines, escapeHtml, parseTSV, summarize, toCSV, toTSV } from "./format.ts";
+import { renderTablePage } from "./page.ts";
 import { Store } from "./store.ts";
-import { COPY_BUTTON_LIMIT, Telegram, type InlineButton } from "./telegram.ts";
+import { Telegram, type InlineButton } from "./telegram.ts";
 import type { Env, Extraction } from "./types.ts";
 
 const HELP = `<b>Send me a photo of a table.</b> I reply with the table ready to paste into Excel or Google Sheets.
 
 <b>How to copy</b>
-Tap the grey block (or its copy icon), then paste into cell A1. Columns split automatically.
-Short tables also get a 📋 Copy button.
+Tap <b>📊 Open &amp; copy</b> under the reply, then <b>Copy table</b>, then paste into cell A1.
+Every value lands in its own column.
 
 <b>Tips</b>
 • Send the image as a <i>File</i> instead of a Photo for sharper text on big tables.
@@ -25,6 +26,8 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/setup") return setup(request, env, url);
+    const view = url.pathname.match(/^\/t\/([A-Za-z0-9_-]{16,64})$/);
+    if (view && request.method === "GET") return viewTable(env, view[1]);
     if (request.method !== "POST" || url.pathname !== "/webhook") {
       return new Response("image-to-excel bot is running", { status: 200 });
     }
@@ -88,6 +91,27 @@ async function setup(request: Request, env: Env, url: URL): Promise<Response> {
   return Response.json({ bot: me.username, webhook: info });
 }
 
+/** GET /t/<token>: the table viewer page. The token is the only key, so it is long and random. */
+async function viewTable(env: Env, token: string): Promise<Response> {
+  const row = await new Store(env.DB).getShared(token);
+  const headers = {
+    "cache-control": "private, no-store",
+    "x-robots-tag": "noindex",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+  };
+  if (!row) return new Response("Table not found or deleted.", { status: 404, headers });
+  return new Response(renderTablePage(row.extraction), {
+    headers: { ...headers, "content-type": "text/html; charset=utf-8" },
+  });
+}
+
+/** Mini App button in private chats (opens inside Telegram); plain link elsewhere. */
+function openButton(env: Env, chatId: number, token: string): InlineButton {
+  const url = `${env.PUBLIC_URL}/t/${token}`;
+  return chatId > 0 ? { text: "📊 Open & copy", web_app: { url } } : { text: "📊 Open & copy", url };
+}
+
 function allowed(env: Env, chatId: number) {
   const list = (env.ALLOWED_CHAT_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   return list.length === 0 || list.includes(String(chatId));
@@ -125,7 +149,7 @@ async function onMessage(env: Env, tg: Telegram, store: Store, msg: TgMessage) {
       await sendFile(tg, store, chatId, command.slice(1) as "csv" | "tsv");
       return;
     case "/hq": {
-      const last = await store.getExtraction(chatId);
+      const last = await store.getExtraction(chatId, undefined, true);
       if (!last) return void (await tg.sendHtml(chatId, "Send an image first."));
       await runExtraction(env, tg, store, chatId, last.file_id, last.mime, rest.join(" "), "claude");
       return;
@@ -142,6 +166,17 @@ async function onMessage(env: Env, tg: Telegram, store: Store, msg: TgMessage) {
     .slice(-24000);
   const answer = await chat(env, context, await store.history(chatId));
   await store.addMessage(chatId, "assistant", answer);
+
+  // Tables the model wrote as TSV code blocks become real tables with an Open & copy button.
+  const tables = [...answer.matchAll(/```[a-zA-Z]*\n?([\s\S]*?)```/g)].map((m) => parseTSV(m[1])).filter((t) => t !== null);
+  if (tables.length) {
+    const text = answer.replace(/```[a-zA-Z]*\n?[\s\S]*?```/g, "").trim();
+    if (text) for (const part of chunkLines(text)) await tg.sendHtml(chatId, escapeHtml(part));
+    const extraction: Extraction = { tables, notes: "" };
+    const id = await store.saveExtraction(chatId, "", "", "chat", extraction);
+    await sendExtraction(env, tg, store, chatId, id, extraction, "chat");
+    return;
+  }
   for (const part of chunkLines(answer)) await tg.sendHtml(chatId, markdownishToHtml(part));
 }
 
@@ -180,41 +215,35 @@ async function runExtraction(
       : await extractWithWorkersAI(env, image, mime, instruction);
   const id = await store.saveExtraction(chatId, fileId, mime, engine, extraction);
   await store.addMessage(chatId, "user", `[sent an image${instruction ? `: ${instruction}` : ""}; extracted as table ${id}]`);
-  await sendExtraction(env, tg, chatId, id, extraction, engine, replyTo);
+  await sendExtraction(env, tg, store, chatId, id, extraction, engine, replyTo);
 }
 
-async function sendExtraction(env: Env, tg: Telegram, chatId: number, id: number, e: Extraction, engine: Engine, replyTo?: number) {
+async function sendExtraction(
+  env: Env,
+  tg: Telegram,
+  store: Store,
+  chatId: number,
+  id: number,
+  e: Extraction,
+  engine: Engine | "chat",
+  replyTo?: number,
+) {
   if (e.tables.length === 0) {
     await tg.sendHtml(chatId, `No table found.${e.notes ? `\n${escapeHtml(e.notes)}` : ""}`, undefined, replyTo);
     return;
   }
 
-  for (const [i, table] of e.tables.entries()) {
-    const tsv = toTSV(table);
-    const chunks = chunkLines(tsv);
-    const label = [
-      table.title ? `<b>${escapeHtml(table.title)}</b>` : e.tables.length > 1 ? `<b>Table ${i + 1}</b>` : "",
-      `${table.rows.length} rows × ${table.headers.length} cols`,
-      engine === "claude" ? "HQ" : "",
-    ]
-      .filter(Boolean)
-      .join(" · ");
+  const token = await store.createShare(chatId, id);
+  const lines = e.tables.map((t, i) => {
+    const name = t.title || (e.tables.length > 1 ? `Table ${i + 1}` : "Table");
+    return `✅ <b>${escapeHtml(name)}</b> · ${t.rows.length} rows × ${t.headers.length} cols${engine === "claude" ? " · HQ" : ""}\n<i>${escapeHtml(summarize(t))}</i>`;
+  });
+  if (e.notes) lines.push(`ℹ️ ${escapeHtml(e.notes)}`);
 
-    for (const [c, chunk] of chunks.entries()) {
-      const isLast = c === chunks.length - 1;
-      const head = chunks.length > 1 ? `${label} · part ${c + 1}/${chunks.length}` : label;
-      const buttons: InlineButton[][] = [];
-      if (chunk.length <= COPY_BUTTON_LIMIT) buttons.push([{ text: "📋 Copy", copy_text: { text: chunk } }]);
-      if (isLast) {
-        const row: InlineButton[] = [{ text: "CSV file", callback_data: `csv:${id}` }];
-        if (engine !== "claude" && env.ANTHROPIC_API_KEY) row.push({ text: "🔁 Re-read HQ", callback_data: `hq:${id}` });
-        buttons.push(row);
-      }
-      await tg.sendHtml(chatId, `${head}\n<pre>${escapeHtml(chunk)}</pre>`, buttons, c === 0 ? replyTo : undefined);
-    }
-  }
-
-  if (e.notes) await tg.sendHtml(chatId, `ℹ️ ${escapeHtml(e.notes)}`);
+  const actions: InlineButton[] = [{ text: "CSV file", callback_data: `csv:${id}` }];
+  if (engine === "workers-ai" && env.ANTHROPIC_API_KEY) actions.push({ text: "🔁 Re-read HQ", callback_data: `hq:${id}` });
+  const html = lines.join("\n\n");
+  await tg.sendHtml(chatId, html.length > 4000 ? html.slice(0, 4000) + "…" : html, [[openButton(env, chatId, token)], actions], replyTo);
 }
 
 async function sendFile(tg: Telegram, store: Store, chatId: number, kind: "csv" | "tsv", id?: number) {
