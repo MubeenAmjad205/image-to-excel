@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "image-to-excel-bot",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": { "binding": "AI" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "image-to-excel",
+      // Replace with the id printed by: npx wrangler d1 create image-to-excel
+      "database_id": "REPLACE_WITH_YOUR_D1_ID"
+    }
+  ],
+  "vars": {
+    // Free Workers AI vision model. Swap for any other vision model in the catalog.
+    "VISION_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
+    // Comma-separated Telegram chat ids allowed to use the bot. Empty = anyone.
+    "ALLOWED_CHAT_IDS": ""
+  }
+  // Secrets (set with `npx wrangler secret put NAME`):
+  //   TELEGRAM_BOT_TOKEN       required
+  //   TELEGRAM_WEBHOOK_SECRET  required, any random string
+  //   ANTHROPIC_API_KEY        optional, enables the /hq second door
+}
