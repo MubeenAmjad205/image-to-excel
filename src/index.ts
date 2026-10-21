@@ -24,6 +24,7 @@ Short tables also get a 📋 Copy button.
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === "/setup") return setup(request, env, url);
     if (request.method !== "POST" || url.pathname !== "/webhook") {
       return new Response("image-to-excel bot is running", { status: 200 });
     }
@@ -56,6 +57,36 @@ export default {
     return new Response("ok");
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * POST /setup with header `x-setup-key: <TELEGRAM_WEBHOOK_SECRET>`.
+ * Registers this Worker's /webhook with Telegram and sets the command menu.
+ * Runs from Cloudflare, so it works even where api.telegram.org is blocked locally.
+ */
+async function setup(request: Request, env: Env, url: URL): Promise<Response> {
+  if (request.method !== "POST" || request.headers.get("x-setup-key") !== env.TELEGRAM_WEBHOOK_SECRET) {
+    return new Response("forbidden", { status: 403 });
+  }
+  const tg = new Telegram(env);
+  const me = await tg.call<{ username: string }>("getMe", {});
+  await tg.call("setWebhook", {
+    url: `${url.origin}/webhook`,
+    secret_token: env.TELEGRAM_WEBHOOK_SECRET,
+    allowed_updates: ["message", "callback_query"],
+    drop_pending_updates: true,
+  });
+  await tg.call("setMyCommands", {
+    commands: [
+      { command: "help", description: "How to use the bot" },
+      { command: "csv", description: "Last table as a .csv file" },
+      { command: "tsv", description: "Last table as a .tsv file" },
+      { command: "hq", description: "Re-read last image with the HQ model" },
+      { command: "clear", description: "Forget history" },
+    ],
+  });
+  const info = await tg.call<Record<string, unknown>>("getWebhookInfo", {});
+  return Response.json({ bot: me.username, webhook: info });
+}
 
 function allowed(env: Env, chatId: number) {
   const list = (env.ALLOWED_CHAT_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean);

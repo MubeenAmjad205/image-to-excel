@@ -4,6 +4,9 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Run near Telegram's API (Europe) instead of the visitor's nearest data center.
+  // Telegram is blocked from some regions (e.g. Cloudflare's Lahore colo), which made calls hang.
+  "placement": { "mode": "targeted", "hostname": "api.telegram.org" },
   "ai": { "binding": "AI" },
   "d1_databases": [
     {

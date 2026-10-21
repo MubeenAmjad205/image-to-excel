@@ -1,0 +1,15 @@
+name: Setup Telegram webhook
+# Calls the Worker's /setup route from GitHub's servers. Use this when api.telegram.org
+# is blocked from your own network: the Worker then runs in a data center that can reach Telegram.
+on:
+  workflow_dispatch:
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Register webhook and commands
+        env:
+          SETUP_KEY: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          WORKER_URL: https://image-to-excel-bot.image-to-excel-bot.workers.dev
+        run: |
+          curl -sS --fail-with-body -m 60 -X POST -H "x-setup-key: $SETUP_KEY" "$WORKER_URL/setup" | jq .
