@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { base64, normalizeTable, parseJsonObject } from "./format.ts";
+import { base64, modelText, normalizeTable, parseJsonObject } from "./format.ts";
 import { EXTRACTION_PROMPT, EXTRACTION_SCHEMA, type Env, type Extraction } from "./types.ts";
 
 export type Engine = "workers-ai" | "claude";
@@ -38,8 +38,8 @@ export async function extractWithWorkersAI(env: Env, image: ArrayBuffer, mime: s
     response_format: { type: "json_schema", json_schema: EXTRACTION_SCHEMA },
     max_tokens: 8192,
     temperature: 0,
-  } as never)) as { response?: unknown };
-  return toExtraction(result.response);
+  } as never)) as unknown;
+  return toExtraction(modelText(result));
 }
 
 /** Second door: Claude. Better on dense, blurry or handwritten tables. */
@@ -96,6 +96,7 @@ ${context || "(none yet - the user has not sent an image)"}`;
     messages: [{ role: "system", content: system }, ...history],
     max_tokens: 4096,
     temperature: 0.2,
-  } as never)) as { response?: unknown };
-  return typeof result.response === "string" ? result.response : JSON.stringify(result.response ?? "");
+  } as never)) as unknown;
+  const text = modelText(result);
+  return typeof text === "string" ? text : JSON.stringify(text ?? "");
 }

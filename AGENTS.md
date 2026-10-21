@@ -24,6 +24,7 @@ npm run typecheck      # must pass
 npm test               # must pass
 npm run dev            # local Worker (uses real Workers AI, needs `wrangler login`)
 npm run deploy         # production
+npm run eval           # model accuracy on samples/ (see docs/evaluation.md)
 npx wrangler tail      # live logs
 ```
 
@@ -38,7 +39,8 @@ npx wrangler tail      # live logs
 | `src/telegram.ts` | Telegram Bot API client |
 | `src/types.ts` | Env, table types, extraction prompt and JSON schema |
 | `schema.sql` | D1 schema. Additive changes only |
-| `test/` | Node tests for pure code |
+| `test/` | Node tests for pure code and Telegram retry/progress logic |
+| `scripts/eval.ts` | Model accuracy harness |
 | `docs/` | Context, rules, plan, runbook, decisions |
 
 ## Definition of done

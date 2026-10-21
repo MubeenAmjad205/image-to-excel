@@ -5,9 +5,9 @@ import { renderTablePage } from "../src/page.ts";
 // parseTSV: real tables only.
 assert.equal(parseTSV("just text\nmore text"), null);
 assert.equal(parseTSV("a\tb"), null); // header only
-const p = parseTSV("Site\tStatus\nSITE133\tIP\nSITE166\t\n");
+const p = parseTSV("Site\tStatus\nSITE103\tIP\nSITE106\t\n");
 assert.deepEqual(p?.headers, ["Site", "Status"]);
-assert.deepEqual(p?.rows, [["SITE133", "IP"], ["SITE166", ""]]);
+assert.deepEqual(p?.rows, [["SITE103", "IP"], ["SITE106", ""]]);
 
 assert.equal(summarize({ title: "", headers: ["A", "B"], rows: [] }), "A · B");
 assert.ok(summarize({ title: "", headers: Array(200).fill("Header"), rows: [] }).endsWith("…"));

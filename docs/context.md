@@ -19,7 +19,7 @@ Screenshots of Excel tables, usually clean, sometimes with:
 - Coloured rows that carry status (green = done, orange = waiting).
 - Filter arrows, sort icons and filter counts above the header row.
 - Empty cells in the middle of a row.
-- Codes where one wrong character matters: site ids (`SITE166`, `ABCD80`),
+- Codes where one wrong character matters: site ids (`SITE106`, `ABCD80`),
   equipment models (`R8881 S9000(B8B)`, `1*R8852E S9000+2*R9614E S26+`), board positions (`51.1.1`).
 - Composite cells joined with `+` that users sometimes want split into columns.
 

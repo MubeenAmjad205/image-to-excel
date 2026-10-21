@@ -8,7 +8,8 @@
     "db:init": "wrangler d1 execute image-to-excel --remote --file=schema.sql",
     "db:init:local": "wrangler d1 execute image-to-excel --local --file=schema.sql",
     "typecheck": "tsc --noEmit && tsc --noEmit -p test",
-    "test": "node --experimental-strip-types test/format.test.ts && node --experimental-strip-types test/page.test.ts && node --experimental-strip-types test/telegram.test.ts"
+    "test": "node --experimental-strip-types test/format.test.ts && node --experimental-strip-types test/page.test.ts && node --experimental-strip-types test/telegram.test.ts",
+    "eval": "node --experimental-strip-types scripts/eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.137.0"

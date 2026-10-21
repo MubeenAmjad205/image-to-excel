@@ -40,12 +40,16 @@ Status key: ✅ done · 🔄 in progress · ⏳ next · 💤 later
 - ⏳ Check `events.colo` for real Telegram traffic. If real updates ever run in `LHE`, move the work
   into a Durable Object with `locationHint: "weur"` so it always runs in Europe
 
-## Phase 3 – Accuracy check ⏳
+## Phase 3 – Accuracy check ✅ (first pass)
 
 First result, Llama 4 Scout on the site-tracker sample sent as a compressed Photo: 9 columns and 11 rows
-correct, 2 cells missing (Team for SITE133 "Team Amber" and SITE166 "Team Lime" came back empty).
+correct, 2 cells missing (two names in the Team column came back empty).
 
 
+- ✅ `npm run eval` harness; 7 free-catalog models compared on 2 samples ([evaluation](evaluation.md))
+- ✅ Keep Llama 4 Scout ([0006](decisions/0006-default-vision-model.md)): 1 wrong cell of 147
+- ✅ Root cause of the 2 missing cells: Telegram Photo compression (full PNG read correctly)
+- ⏳ Add 5 to 10 more real samples and repeat runs
 - Run the two sample screenshots and 5 to 10 more real ones through the bot.
 - Record per image: cells wrong, empty-cell shifts, rows missed (template in [testing.md](testing.md)).
 - If Llama 4 Scout misses more than about 1 cell in 100, try other free vision models in the

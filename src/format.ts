@@ -55,6 +55,13 @@ export function chunkLines(text: string, limit = 3800): string[] {
   return chunks;
 }
 
+/** Workers AI returns either { response } or an OpenAI-style { choices } body, depending on model and API. */
+export function modelText(result: unknown): unknown {
+  const r = result as { response?: unknown; choices?: { message?: { content?: unknown } }[] } | undefined;
+  if (r?.response !== undefined) return r.response;
+  return r?.choices?.[0]?.message?.content;
+}
+
 /** Pull the first JSON object out of model text (handles ```json fences and chatter). */
 export function parseJsonObject(raw: unknown): unknown {
   if (raw && typeof raw === "object") return raw;
