@@ -8,6 +8,8 @@
   // Telegram is blocked from some regions (e.g. Cloudflare's Lahore colo), which made calls hang.
   "placement": { "mode": "targeted", "hostname": "api.telegram.org" },
   "ai": { "binding": "AI" },
+  // Workers Logs: keeps console output for later debugging (dashboard > Workers > Logs).
+  "observability": { "enabled": true },
   "d1_databases": [
     {
       "binding": "DB",

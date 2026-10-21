@@ -26,7 +26,14 @@
    - **Command**: `/start`, `/help`, `/csv`, `/tsv`, `/hq`, `/clear`.
    - **Plain text**: the last 3 extractions, as TSV, go into the system prompt, plus the last 12 messages.
    - **Button press** (`callback_query`): `csv:<id>` sends a file, `hq:<id>` re-reads with Claude.
-5. The Worker does the work while the webhook request is open, then returns 200.
+5. Long work shows progress (`src/progress.ts`): one status message is sent at once
+   ("📥 Got your image. Downloading…"), edited per step ("🔎 Reading the table… 12s", with the
+   typing indicator kept alive), and finally edited into the answer. Errors replace it with a plain
+   explanation (`friendlyError`). Button presses answer with a toast (`answerCallbackQuery`).
+6. Every Telegram call has a 10 s per-attempt timeout and up to 4 attempts with backoff
+   for network errors, 5xx (including Cloudflare 525) and 429. 4xx is not retried.
+7. Each request writes one row to `events` (kind, Cloudflare colo, duration, error).
+8. The Worker does the work while the webhook request is open, then returns 200.
    This avoids the 30 second `waitUntil` limit. Duplicate deliveries are handled by step 2.
 
 ## Reply format
@@ -51,6 +58,7 @@ engine `chat` and an empty `file_id`, and get the same buttons.
 | `updates` | `update_id`, `created_at` | Dedup. Grows forever; prune later (see plan) |
 | `tables` | `id`, `chat_id`, `file_id`, `mime`, `data` (JSON `Extraction`), `engine`, `created_at` | `file_id` lets `/hq` re-download the image without storing it |
 | `shares` | `token`, `table_id`, `chat_id`, `created_at` | Viewer links. Anyone with the link can view that table |
+| `events` | `update_id`, `kind`, `colo`, `ms`, `error`, `created_at` | One row per webhook request, for diagnosis |
 | `messages` | `id`, `chat_id`, `role`, `content`, `created_at` | Chat history |
 
 Images are never stored. Telegram keeps them and `file_id` fetches them again.

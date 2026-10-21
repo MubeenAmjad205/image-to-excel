@@ -33,3 +33,14 @@ CREATE TABLE IF NOT EXISTS shares (
   chat_id INTEGER NOT NULL,
   created_at INTEGER NOT NULL
 );
+
+-- One row per webhook request, for diagnosing where and why requests fail.
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  update_id INTEGER,
+  kind TEXT NOT NULL,
+  colo TEXT,
+  ms INTEGER NOT NULL,
+  error TEXT,
+  created_at INTEGER NOT NULL
+);

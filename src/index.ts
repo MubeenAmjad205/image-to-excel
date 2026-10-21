@@ -1,6 +1,7 @@
 import { chat, extractWithClaude, extractWithWorkersAI, type Engine } from "./extract.ts";
 import { chunkLines, escapeHtml, parseTSV, summarize, toCSV, toTSV } from "./format.ts";
 import { renderTablePage } from "./page.ts";
+import { Progress, friendlyError } from "./progress.ts";
 import { Store } from "./store.ts";
 import { Telegram, type InlineButton } from "./telegram.ts";
 import type { Env, Extraction } from "./types.ts";
@@ -43,6 +44,16 @@ export default {
     // Telegram retries are dropped above by update_id.
     const tg = new Telegram(env);
     const chatId = update.message?.chat.id ?? update.callback_query?.message?.chat.id;
+    const started = Date.now();
+    const colo = (request.cf as { colo?: string } | undefined)?.colo;
+    const kind = update.callback_query
+      ? `button:${(update.callback_query.data ?? "").split(":")[0]}`
+      : update.message?.photo || update.message?.document
+        ? "image"
+        : update.message?.text?.startsWith("/")
+          ? update.message.text.split(/[\s@]/)[0]
+          : "text";
+    let error: string | undefined;
     try {
       if (chatId === undefined) return new Response("ok");
       if (!allowed(env, chatId)) {
@@ -53,10 +64,13 @@ export default {
       else if (update.message) await onMessage(env, tg, store, update.message);
     } catch (err) {
       console.error(err);
+      error = err instanceof Error ? err.message : String(err);
       if (chatId !== undefined) {
-        await tg.sendHtml(chatId, `⚠️ ${escapeHtml(err instanceof Error ? err.message : String(err))}`).catch(() => {});
+        await tg.sendHtml(chatId, `⚠️ ${escapeHtml(friendlyError(err))}`).catch(() => {});
       }
     }
+    console.log(JSON.stringify({ update: update.update_id, kind, colo, ms: Date.now() - started, error }));
+    await store.logEvent({ updateId: update.update_id, kind, colo, ms: Date.now() - started, error });
     return new Response("ok");
   },
 } satisfies ExportedHandler<Env>;
@@ -146,6 +160,7 @@ async function onMessage(env: Env, tg: Telegram, store: Store, msg: TgMessage) {
       return;
     case "/csv":
     case "/tsv":
+      await tg.typing(chatId, "upload_document");
       await sendFile(tg, store, chatId, command.slice(1) as "csv" | "tsv");
       return;
     case "/hq": {
@@ -157,7 +172,17 @@ async function onMessage(env: Env, tg: Telegram, store: Store, msg: TgMessage) {
   }
 
   if (!text) return;
-  await tg.typing(chatId);
+  const progress = await Progress.start(tg, chatId, "💭 Thinking…", msg.message_id);
+  progress.step("💭 Thinking…", true);
+  try {
+    await answerChat(env, tg, store, chatId, text, progress);
+  } catch (err) {
+    console.error(err);
+    await progress.fail(err);
+  }
+}
+
+async function answerChat(env: Env, tg: Telegram, store: Store, chatId: number, text: string, progress: Progress) {
   await store.addMessage(chatId, "user", text);
   const recent = await store.recentExtractions(chatId);
   const context = recent
@@ -170,22 +195,33 @@ async function onMessage(env: Env, tg: Telegram, store: Store, msg: TgMessage) {
   // Tables the model wrote as TSV code blocks become real tables with an Open & copy button.
   const tables = [...answer.matchAll(/```[a-zA-Z]*\n?([\s\S]*?)```/g)].map((m) => parseTSV(m[1])).filter((t) => t !== null);
   if (tables.length) {
-    const text = answer.replace(/```[a-zA-Z]*\n?[\s\S]*?```/g, "").trim();
-    if (text) for (const part of chunkLines(text)) await tg.sendHtml(chatId, escapeHtml(part));
+    const prose = answer.replace(/```[a-zA-Z]*\n?[\s\S]*?```/g, "").trim();
     const extraction: Extraction = { tables, notes: "" };
     const id = await store.saveExtraction(chatId, "", "", "chat", extraction);
-    await sendExtraction(env, tg, store, chatId, id, extraction, "chat");
+    const reply = await buildReply(env, store, chatId, id, extraction, "chat", progress.elapsed);
+    const html = prose ? `${escapeHtml(prose.slice(0, 1500))}\n\n${reply.html}` : reply.html;
+    await progress.done(html, reply.buttons);
     return;
   }
-  for (const part of chunkLines(answer)) await tg.sendHtml(chatId, markdownishToHtml(part));
+  const [first, ...more] = chunkLines(answer);
+  await progress.done(markdownishToHtml(first ?? "(no answer)"));
+  for (const part of more) await tg.sendHtml(chatId, markdownishToHtml(part));
 }
 
 async function onCallback(env: Env, tg: Telegram, store: Store, cb: TgCallback) {
   const chatId = cb.message!.chat.id;
   const [action, idStr] = (cb.data ?? "").split(":");
   const id = Number(idStr);
-  await tg.answerCallback(cb.id, action === "hq" ? "Re-reading with the HQ model…" : undefined);
-  if (action === "csv" || action === "tsv") await sendFile(tg, store, chatId, action, id);
+  const toast: Record<string, string> = {
+    csv: "📄 Preparing your CSV file…",
+    tsv: "📄 Preparing your TSV file…",
+    hq: "🔁 Re-reading with the HQ model…",
+  };
+  await tg.answerCallback(cb.id, toast[action]);
+  if (action === "csv" || action === "tsv") {
+    await tg.typing(chatId, "upload_document");
+    await sendFile(tg, store, chatId, action, id);
+  }
   if (action === "hq") {
     const row = await store.getExtraction(chatId, id);
     if (row) await runExtraction(env, tg, store, chatId, row.file_id, row.mime, "", "claude");
@@ -207,43 +243,50 @@ async function runExtraction(
     await tg.sendHtml(chatId, "The HQ model is not set up. Add ANTHROPIC_API_KEY as a Worker secret to enable /hq.");
     return;
   }
-  await tg.typing(chatId);
-  const image = await tg.download(fileId);
-  const extraction =
-    engine === "claude"
+  const hq = engine === "claude";
+  const progress = await Progress.start(tg, chatId, `📥 Got your image${hq ? " (HQ)" : ""}. Downloading…`, replyTo);
+  try {
+    const image = await tg.download(fileId);
+    progress.step(`🔎 Reading the table${hq ? " with the HQ model" : ""}… this usually takes 20–40 s.`, true);
+    const extraction = hq
       ? await extractWithClaude(env, image, mime, instruction)
       : await extractWithWorkersAI(env, image, mime, instruction);
-  const id = await store.saveExtraction(chatId, fileId, mime, engine, extraction);
-  await store.addMessage(chatId, "user", `[sent an image${instruction ? `: ${instruction}` : ""}; extracted as table ${id}]`);
-  await sendExtraction(env, tg, store, chatId, id, extraction, engine, replyTo);
+    progress.step("🧾 Formatting the table…");
+    const id = await store.saveExtraction(chatId, fileId, mime, engine, extraction);
+    await store.addMessage(chatId, "user", `[sent an image${instruction ? `: ${instruction}` : ""}; extracted as table ${id}]`);
+    const reply = await buildReply(env, store, chatId, id, extraction, engine, progress.elapsed);
+    await progress.done(reply.html, reply.buttons);
+  } catch (err) {
+    console.error(err);
+    await progress.fail(err);
+  }
 }
 
-async function sendExtraction(
+/** Summary text and buttons for a stored extraction. */
+async function buildReply(
   env: Env,
-  tg: Telegram,
   store: Store,
   chatId: number,
   id: number,
   e: Extraction,
   engine: Engine | "chat",
-  replyTo?: number,
-) {
+  seconds: number,
+): Promise<{ html: string; buttons?: InlineButton[][] }> {
   if (e.tables.length === 0) {
-    await tg.sendHtml(chatId, `No table found.${e.notes ? `\n${escapeHtml(e.notes)}` : ""}`, undefined, replyTo);
-    return;
+    return { html: `🤷 No table found in this image.${e.notes ? `\n${escapeHtml(e.notes)}` : ""}` };
   }
-
   const token = await store.createShare(chatId, id);
   const lines = e.tables.map((t, i) => {
     const name = t.title || (e.tables.length > 1 ? `Table ${i + 1}` : "Table");
     return `✅ <b>${escapeHtml(name)}</b> · ${t.rows.length} rows × ${t.headers.length} cols${engine === "claude" ? " · HQ" : ""}\n<i>${escapeHtml(summarize(t))}</i>`;
   });
   if (e.notes) lines.push(`ℹ️ ${escapeHtml(e.notes)}`);
+  if (engine !== "chat") lines.push(`<i>Done in ${seconds}s. Tap 📊 Open &amp; copy, then Copy table.</i>`);
 
-  const actions: InlineButton[] = [{ text: "CSV file", callback_data: `csv:${id}` }];
+  const actions: InlineButton[] = [{ text: "📄 CSV file", callback_data: `csv:${id}` }];
   if (engine === "workers-ai" && env.ANTHROPIC_API_KEY) actions.push({ text: "🔁 Re-read HQ", callback_data: `hq:${id}` });
   const html = lines.join("\n\n");
-  await tg.sendHtml(chatId, html.length > 4000 ? html.slice(0, 4000) + "…" : html, [[openButton(env, chatId, token)], actions], replyTo);
+  return { html: html.length > 4000 ? html.slice(0, 4000) + "…" : html, buttons: [[openButton(env, chatId, token)], actions] };
 }
 
 async function sendFile(tg: Telegram, store: Store, chatId: number, kind: "csv" | "tsv", id?: number) {

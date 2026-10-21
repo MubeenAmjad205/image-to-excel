@@ -62,12 +62,23 @@ curl "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
 | Rotate webhook secret | update `.dev.vars`, `wrangler secret put TELEGRAM_WEBHOOK_SECRET`, `gh secret set TELEGRAM_WEBHOOK_SECRET`, then run the setup Action |
 | Query D1 | `npx wrangler d1 execute image-to-excel --remote --command "SELECT count(*) FROM tables"` |
 
+## Diagnosing a request
+
+```sh
+npx wrangler d1 execute image-to-excel --remote --command \
+  "SELECT id, kind, colo, ms, error, datetime(created_at/1000,'unixepoch') FROM events ORDER BY id DESC LIMIT 20"
+```
+
+`colo` is the Cloudflare data center that ran the request. `LHE` (Lahore) cannot reach Telegram
+reliably. Console output is also kept in Workers Logs (dashboard > Workers > image-to-excel-bot > Logs).
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
 | Calls to Telegram hang from Pakistan | `api.telegram.org` is blocked there, including from Cloudflare's Lahore data center (`cf-placement: local-LHE`). Webhook traffic comes from Telegram's servers and runs elsewhere, so the bot works. For admin calls use the GitHub Action, not a local curl. Do not route the bot through a third-party proxy: it would see the bot token |
 | Bot silent, `getWebhookInfo` shows 403 | Webhook secret mismatch. Re-run `setWebhook` with the current secret |
+| Status message stuck or "Telegram was unreachable" | Cloudflare could not reach Telegram from that colo (seen as 525 or hangs). Check `events.colo`. Retries and timeouts cover short blips |
 | Bot silent, 500 errors | Missing secret or D1 schema not applied. Check `wrangler tail` |
 | "This bot is private" | Your chat id is not in `ALLOWED_CHAT_IDS` |
 | "Model did not return JSON" | Model ignored the schema. Retry, try `/hq`, or change `VISION_MODEL` |

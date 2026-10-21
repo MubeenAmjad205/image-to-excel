@@ -11,7 +11,10 @@ export interface StoredTable {
 const now = () => Date.now();
 
 export class Store {
-  constructor(private db: D1Database) {}
+  private db: D1Database;
+  constructor(db: D1Database) {
+    this.db = db;
+  }
 
   /** Returns false if this update was already handled (Telegram retry). */
   async claimUpdate(updateId: number): Promise<boolean> {
@@ -66,6 +69,14 @@ export class Store {
       .bind(chatId, limit)
       .all<Row>();
     return results.map(fromRow).reverse();
+  }
+
+  async logEvent(e: { updateId?: number; kind: string; colo?: string; ms: number; error?: string }) {
+    await this.db
+      .prepare("INSERT INTO events (update_id, kind, colo, ms, error, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+      .bind(e.updateId ?? null, e.kind, e.colo ?? null, e.ms, e.error?.slice(0, 500) ?? null, now())
+      .run()
+      .catch((err) => console.error("logEvent failed", err));
   }
 
   async addMessage(chatId: number, role: "user" | "assistant", content: string) {

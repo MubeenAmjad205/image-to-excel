@@ -30,6 +30,16 @@ Status key: ✅ done · 🔄 in progress · ⏳ next · 💤 later
 - ✅ Chat answers with TSV blocks become tables with the same buttons
 - ⏳ Owner to confirm paste into Excel from Telegram Desktop and phone
 
+## Phase 2c – Feedback and reliability ✅ (verify ⏳)
+
+- ✅ Live status message per request, edited through each step and into the answer; toasts on buttons
+- ✅ Friendly error messages
+- ✅ Telegram calls: per-attempt timeout, retries on 5xx/525/429/network errors
+  (2026-10-21: a reply was lost to a Cloudflare 525 with no retry)
+- ✅ `events` table + Workers Logs for diagnosis
+- ⏳ Check `events.colo` for real Telegram traffic. If real updates ever run in `LHE`, move the work
+  into a Durable Object with `locationHint: "weur"` so it always runs in Europe
+
 ## Phase 3 – Accuracy check ⏳
 
 First result, Llama 4 Scout on the site-tracker sample sent as a compressed Photo: 9 columns and 11 rows
